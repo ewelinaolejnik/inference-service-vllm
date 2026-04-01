@@ -1,0 +1,28 @@
+[project]
+name = "inference-service-vllm"
+version = "1.0.0"
+description = "High-performance LLM inference service using vLLM with GPU optimization"
+requires-python = ">=3.10"
+dependencies = [
+    "vllm>=0.6.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "torch>=2.1.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "httpx>=0.27.0",
+    "ruff>=0.4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
