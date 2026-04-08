@@ -11,5 +11,5 @@ venv/
 .pytest_cache/
 .ruff_cache/
 *.log
-benchmarks/results*.json
+benchmarks/results
 .mypy_cache/

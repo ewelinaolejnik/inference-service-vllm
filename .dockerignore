@@ -1,0 +1,15 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.git/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+*.log
+benchmarks/results/
+.vscode/
+.idea/
+.cursor/

@@ -1,19 +1,59 @@
+x-gpu-common: &gpu-common
+  build: .
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: 1
+            capabilities: [gpu]
+  volumes:
+    - huggingface-cache:/root/.cache/huggingface
+    - ./benchmarks/results:/app/benchmarks/results
+  env_file:
+    - .env
+  shm_size: "4gb"
+  dns:
+    - 8.8.8.8
+    - 8.8.4.4
+
 services:
+  # ── API server ──────────────────────────────────────────────────────
   inference:
-    build: .
+    <<: *gpu-common
+    container_name: vllm-inference
     ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    volumes:
-      - huggingface-cache:/root/.cache/huggingface
+      - "8080:8000"
+    entrypoint: ["uvicorn"]
+    command: ["app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  # ── Full benchmark suite ────────────────────────────────────────────
+  benchmark:
+    <<: *gpu-common
+    container_name: vllm-benchmark
+    entrypoint: ["python3", "run_inference.py", "--benchmark"]
+    command: >
+      --batch-sizes 1,2,4,8
+      --dtypes ${BENCHMARK_DTYPES:-float16}
+      --iterations ${BENCHMARK_ITERATIONS:-5}
+      --warmup ${BENCHMARK_WARMUP:-2}
+      --output-dir benchmarks/results
+
+  # ── Quick single-inference smoke test ───────────────────────────────
+  quick-test:
+    <<: *gpu-common
+    container_name: vllm-quick-test
+    entrypoint: ["python3", "run_inference.py"]
+    command: >
+      --prompt "What is deep learning?"
+      --max-tokens 32
+
+  # ── Unit tests (no GPU needed) ──────────────────────────────────────
+  test:
+    build: .
+    container_name: vllm-tests
+    entrypoint: ["pytest"]
+    command: ["tests/test_benchmark.py", "-v", "--tb=short"]
 
 volumes:
   huggingface-cache:

@@ -46,36 +46,33 @@ def run_single(args: argparse.Namespace) -> None:
     gpu_mem = engine.get_gpu_memory_usage()
     if "error" not in gpu_mem:
         print(f"\n--- GPU Memory ---")
-        print(f"Allocated: {gpu_mem['allocated_mb']:.1f} MB")
-        print(f"Reserved:  {gpu_mem['reserved_mb']:.1f} MB")
-        print(f"Total:     {gpu_mem['total_mb']:.1f} MB")
+        print(f"Used:  {gpu_mem['used_mb']:.1f} MB")
+        print(f"Free:  {gpu_mem['free_mb']:.1f} MB")
+        print(f"Total: {gpu_mem['total_mb']:.1f} MB")
+        print(f"Util:  {gpu_mem['utilization_pct']:.1f}%")
 
 
 def run_benchmark(args: argparse.Namespace) -> None:
-    from benchmarks.runner import run_standard_benchmarks, save_results
+    from benchmarks.runner import run_standard_benchmarks
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    results = run_standard_benchmarks(
-        model_name=args.model,
-        max_tokens=args.max_tokens,
+
+    dtypes = [d.strip() for d in args.dtypes.split(",")] if args.dtypes else None
+    batch_sizes = (
+        [int(x) for x in args.batch_sizes.split(",")]
+        if args.batch_sizes
+        else None
     )
 
-    print(f"\n{'='*60}")
-    print("BENCHMARK RESULTS")
-    print(f"{'='*60}\n")
-
-    for r in results:
-        print(f"[{r.label}]")
-        print(f"  Requests:     {r.num_requests}")
-        print(f"  Batch size:   {r.batch_size}")
-        print(f"  Mean latency: {r.mean_latency_ms:.2f} ms")
-        print(f"  P95 latency:  {r.p95_latency_ms:.2f} ms")
-        print(f"  Throughput:   {r.throughput_rps:.2f} req/s")
-        print(f"  Total time:   {r.total_time_s:.3f} s")
-        print()
-
-    path = save_results(results)
-    print(f"Results saved to {path}")
+    run_standard_benchmarks(
+        model_name=args.model,
+        max_tokens=args.max_tokens,
+        batch_sizes=batch_sizes,
+        dtypes=dtypes,
+        num_warmup=args.warmup,
+        num_iterations=args.iterations,
+        output_dir=args.output_dir,
+    )
 
 
 def main() -> None:
@@ -89,7 +86,11 @@ def main() -> None:
     parser.add_argument("--temperature", type=float, default=0.7, help="Sampling temperature")
     parser.add_argument("--model", type=str, default=None, help="Override model name")
     parser.add_argument("--benchmark", action="store_true", help="Run standard benchmarks")
-
+    parser.add_argument("--batch-sizes", type=str, default=None, help="Comma-separated batch sizes (e.g. 1,2,4,8)")
+    parser.add_argument("--dtypes", type=str, default=None, help="Comma-separated dtypes (e.g. float16,float32)")
+    parser.add_argument("--warmup", type=int, default=2, help="Warmup iterations (discarded)")
+    parser.add_argument("--iterations", type=int, default=5, help="Measured iterations per experiment")
+    parser.add_argument("--output-dir", type=str, default="benchmarks/results", help="Output directory for results")
     args = parser.parse_args()
 
     if not args.prompt and not args.benchmark:

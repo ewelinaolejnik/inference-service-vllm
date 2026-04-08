@@ -151,15 +151,12 @@ class InferenceEngine:
         if not self._gpu_available:
             return {"error": "No GPU available"}
 
-        mem = torch.cuda.mem_get_info()
-        total = torch.cuda.get_device_properties(0).total_mem
-        allocated = torch.cuda.memory_allocated(0)
-        reserved = torch.cuda.memory_reserved(0)
+        free, total = torch.cuda.mem_get_info(0)
+        used = total - free
 
         return {
             "total_mb": round(total / 1024**2, 1),
-            "allocated_mb": round(allocated / 1024**2, 1),
-            "reserved_mb": round(reserved / 1024**2, 1),
-            "free_mb": round(mem[0] / 1024**2, 1),
-            "utilization_pct": round(allocated / total * 100, 1) if total > 0 else 0,
+            "used_mb": round(used / 1024**2, 1),
+            "free_mb": round(free / 1024**2, 1),
+            "utilization_pct": round(used / total * 100, 1) if total > 0 else 0,
         }
